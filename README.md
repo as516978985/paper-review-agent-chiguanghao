@@ -87,40 +87,20 @@ FastAPI Web 服务
 
 ### 前置要求
 
-- Python 3.10+
-- Docker（用于运行 MySQL）
+- Docker（用于运行 MySQL 和 Web 服务）
 - LLM API Key（兼容 OpenAI 接口）
 
-### 1. 启动 MySQL
+### 0. 配置环境变量
 
-```bash
-docker compose up -d
-```
-
-等待 MySQL 就绪（约 10-20 秒），可用以下命令检查：
-
-```bash
-docker inspect --format='{{.State.Health.Status}}' paper-review-mysql
-# 输出 healthy 表示就绪
-```
-
-MySQL 默认配置：
-- 端口：`3307`（映射到容器 3306）
-- 数据库：`paper_review_agent`
-- 用户：`paper_review_agent`
-- 密码：`PaperReview_2026`
-
-### 2. 配置环境变量
-
-复制 `.env` 文件，填写必要信息：
+复制 `.env.example` 为 `.env`，填写必要信息：
 
 ```env
 LLM_API_KEY=你的API密钥
 LLM_BASE_URL=https://api.deepseek.com/v1     # 或其他兼容接口
 LLM_MODEL=deepseek-chat                       # 模型名称
 
-MYSQL_HOST=127.0.0.1
-MYSQL_PORT=3307
+MYSQL_HOST=mysql                              # Docker 内使用服务名
+MYSQL_PORT=3306
 MYSQL_USER=paper_review_agent
 MYSQL_PASSWORD=PaperReview_2026
 MYSQL_DATABASE=paper_review_agent
@@ -129,7 +109,28 @@ CROSSREF_MAILTO=你的联系邮箱     # 用于 Crossref API 限流
 REVIEW_YEAR=2026
 ```
 
-### 3. 安装 Python 依赖
+### 1. 一键启动（推荐）
+
+```bash
+docker compose up -d
+```
+
+Docker Compose 会自动：
+- 启动 MySQL 8.0（端口 3307）
+- 构建并启动 FastAPI Web 服务（端口 8765）
+- 等待 MySQL 就绪后再启动 Web 服务
+
+查看启动日志：
+
+```bash
+docker compose logs -f
+```
+
+服务就绪后，浏览器打开 `http://127.0.0.1:8765`
+
+### 2. 手动启动（开发调试）
+
+如果不需要 Docker 运行 Web 服务，也可以单独启动 MySQL，在本地运行 Python：
 
 ```bash
 python -m venv .venv
