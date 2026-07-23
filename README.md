@@ -102,8 +102,9 @@ LLM_MODEL=deepseek-chat                       # 模型名称
 MYSQL_HOST=mysql                              # Docker 内使用服务名
 MYSQL_PORT=3306
 MYSQL_USER=paper_review_agent
-MYSQL_PASSWORD=PaperReview_2026
+MYSQL_PASSWORD=你的数据库密码
 MYSQL_DATABASE=paper_review_agent
+MYSQL_ROOT_PASSWORD=你的root密码              # 仅 Docker 部署需要
 
 CROSSREF_MAILTO=你的联系邮箱     # 用于 Crossref API 限流
 REVIEW_YEAR=2026
@@ -217,7 +218,7 @@ python -m unittest discover -s tests -v
 3. SKILL 规定执行方法，Python 完成实际操作
 4. 历史记录用于整改对比，本次材料仍需重新检查
 5. 证据不足时保留「无法判断」「未能核实」或「暂缓判断」
-6. API Key 和数据库密码只保存在 `.env`
+6. API Key 和数据库密码只保存在 `.env`，不硬编码在 docker-compose.yml 或 SQL 脚本中
 7. 执行轨迹只为实际耗时步骤显示毫秒数
 
 ## 常见问题
