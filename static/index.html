@@ -1,0 +1,1180 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>论文规范审核 Agent</title>
+  <script src="/static/lib/marked.min.js"></script>
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f6f4ef;
+      --surface: #ffffff;
+      --surface-hover: #faf8f5;
+      --primary: #1a2a3a;
+      --primary-light: #2a4055;
+      --accent: #c9953c;
+      --accent-light: #e8c87a;
+      --accent-glow: rgba(201, 149, 60, 0.15);
+      --text: #1a1a2e;
+      --text-secondary: #78716c;
+      --text-muted: #a8a29e;
+      --border: #e8e4de;
+      --border-light: #f0ece6;
+      --success: #2e7d5e;
+      --success-bg: #ecfdf5;
+      --error: #c0392b;
+      --error-bg: #fef2f2;
+      --unknown: #8b7d6b;
+      --unknown-bg: #f8f6f3;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow: 0 4px 20px rgba(0,0,0,0.08);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-xs: 6px;
+      --font-display: 'Source Han Serif SC', 'Noto Serif CJK SC', 'STSong', 'SimSun', 'Songti SC', serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { font-size: 15px; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ===== Scrollbar ===== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* ===== Header ===== */
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    header .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    header .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+    header h1 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    #status {
+      font-size: 13px;
+      color: rgba(255,255,255,0.7);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ===== Layout ===== */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      padding: 24px 32px;
+      max-width: 1500px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    /* ===== Panels ===== */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-header h2 {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--primary);
+      letter-spacing: 0.3px;
+    }
+    .panel-header .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 20px;
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
+    .panel-body {
+      padding: 18px 22px 22px;
+    }
+
+    /* ===== Form Controls ===== */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .form-group .hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .file-upload {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--surface-hover);
+      position: relative;
+    }
+    .file-upload:hover {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .file-upload .upload-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--text-muted);
+      border-radius: 8px;
+      color: var(--text-muted);
+      transition: var(--transition);
+    }
+    .file-upload:hover .upload-icon {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .file-upload .upload-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+    .file-upload .upload-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .file-upload .upload-text strong {
+      color: var(--accent);
+    }
+    .file-upload.has-file {
+      border-style: solid;
+      border-color: var(--success);
+      background: var(--success-bg);
+      padding: 16px 20px;
+    }
+    .file-upload.has-file .upload-icon {
+      width: 32px;
+      height: 32px;
+      margin: 0 auto 6px;
+      border-color: var(--success);
+      color: var(--success);
+    }
+    .file-upload.has-file .upload-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+    .file-upload.has-file .upload-text {
+      font-size: 13px;
+    }
+    .file-selected-name {
+      display: none;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 10px;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+    .file-selected-name.visible {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+    .file-selected-name .file-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 2px;
+    }
+    .file-info {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding: 10px 14px;
+      background: var(--surface-hover);
+      border-radius: var(--radius-xs);
+      margin-top: 12px;
+      line-height: 1.5;
+      display: none;
+    }
+    .file-info.visible {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    .file-info .filename {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .file-info .stats {
+      display: flex;
+      gap: 12px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .file-info .stat {
+      font-size: 12px;
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .stat-pass { background: var(--success-bg); color: var(--success); }
+    .stat-fail { background: var(--error-bg); color: var(--error); }
+    .stat-unknown { background: var(--unknown-bg); color: var(--unknown); }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      font-size: 14px;
+      font-family: var(--font-sans);
+      background: var(--surface);
+      color: var(--text);
+      transition: var(--transition);
+      outline: none;
+    }
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 11px 20px;
+      border: 0;
+      border-radius: var(--radius-xs);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-light);
+      box-shadow: 0 4px 12px rgba(26,42,58,0.25);
+    }
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-accent:hover:not(:disabled) {
+      background: #b8862e;
+      box-shadow: 0 4px 12px rgba(201,149,60,0.35);
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+    .btn.loading .spinner { display: inline-block; }
+    .btn.loading .btn-text { opacity: 0.7; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== Capabilities List ===== */
+    .capability-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .capability-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .capability-item:last-child { border-bottom: 0; }
+    .capability-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .capability-icon.mcp {
+      background: #eef2ff;
+      color: #4f46e5;
+    }
+    .capability-icon.skill {
+      background: #fef3c7;
+      color: #d97706;
+    }
+    .capability-info .cap-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .capability-info .cap-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 1px;
+      word-break: break-all;
+    }
+
+    /* ===== Trace Timeline ===== */
+    .trace-wrapper {
+      max-height: 320px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      margin: 0 -22px;
+      padding: 0 22px;
+    }
+    .trace-wrapper::-webkit-scrollbar { width: 4px; }
+    .trace-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .trace-timeline {
+      position: relative;
+      padding: 4px 0;
+    }
+    .trace-timeline::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: var(--border);
+      border-radius: 1px;
+    }
+    .trace-step {
+      position: relative;
+      padding: 6px 0 6px 44px;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: traceIn 0.35s ease forwards;
+    }
+    @keyframes traceIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .trace-step .dot {
+      position: absolute;
+      left: 9px;
+      top: 11px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      z-index: 1;
+      transition: var(--transition);
+    }
+    .trace-step.active .dot {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+    }
+    .trace-step.completed .dot {
+      border-color: var(--success);
+      background: var(--success);
+    }
+    .trace-step .trace-content {
+      background: var(--surface-hover);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xs);
+      padding: 8px 12px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      transition: var(--transition);
+    }
+    .trace-step.active .trace-content {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .trace-step .trace-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .trace-step .trace-label .tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+    .trace-step .trace-label .tag.memory    { background: #dbeafe; color: #2563eb; }
+    .trace-step .trace-label .tag.llm       { background: #f3e8ff; color: #9333ea; }
+    .trace-step .trace-label .tag.tool      { background: #d1fae5; color: #059669; }
+    .trace-step .trace-label .tag.skill     { background: #fef3c7; color: #d97706; }
+    .trace-step .trace-label .tag.citation  { background: #e0f2fe; color: #0284c7; }
+    .trace-step .trace-label .tag.complete  { background: #d1fae5; color: #059669; }
+    .trace-step .trace-label .tag.error     { background: #fef2f2; color: #dc2626; }
+    .trace-step .trace-label .name {
+      font-weight: 500;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .trace-step .trace-ms {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    .trace-step.error .dot {
+      border-color: var(--error);
+      background: var(--error);
+    }
+    .trace-step.error .trace-content {
+      border-color: var(--error);
+      background: var(--error-bg);
+    }
+    .trace-hint {
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    /* ===== Report ===== */
+    .report-area {
+      min-height: 300px;
+      line-height: 1.7;
+    }
+    .report-area .report-placeholder {
+      color: var(--text-muted);
+      font-size: 14px;
+      text-align: center;
+      padding: 50px 0;
+    }
+    .report-area .report-placeholder .ph-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 14px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.5;
+    }
+    .report-area .report-placeholder .ph-icon svg {
+      width: 22px;
+      height: 22px;
+      color: var(--text-muted);
+    }
+
+    /* ===== Markdown Styling ===== */
+    .markdown-body {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+    .markdown-body h1 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      margin: 28px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--accent);
+      color: var(--primary);
+    }
+    .markdown-body h2 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      margin: 24px 0 12px;
+      color: var(--primary);
+    }
+    .markdown-body h3 {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 600;
+      margin: 20px 0 10px;
+      color: var(--primary-light);
+    }
+    .markdown-body p {
+      margin: 8px 0;
+    }
+    .markdown-body strong {
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .markdown-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 13px;
+    }
+    .markdown-body th {
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+    .markdown-body th:first-child { border-radius: 6px 0 0 0; }
+    .markdown-body th:last-child { border-radius: 0 6px 0 0; }
+    .markdown-body td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .markdown-body tr:nth-child(even) td {
+      background: var(--surface-hover);
+    }
+    .markdown-body tr:last-child td:first-child { border-radius: 0 0 0 6px; }
+    .markdown-body tr:last-child td:last-child { border-radius: 0 0 6px 0; }
+    .markdown-body blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 8px 16px;
+      margin: 12px 0;
+      background: var(--accent-glow);
+      border-radius: 0 6px 6px 0;
+      color: var(--text-secondary);
+    }
+    .markdown-body code {
+      background: #f1f0ec;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    .markdown-body pre {
+      background: var(--primary);
+      color: #e8e4de;
+      padding: 16px 20px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      margin: 14px 0;
+    }
+    .markdown-body pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: 13px;
+    }
+    .markdown-body hr {
+      border: 0;
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+    .markdown-body ul, .markdown-body ol {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+    .markdown-body li {
+      margin: 4px 0;
+    }
+
+    /* ===== Panel highlighting ===== */
+    .panel-accent {
+      border-top: 3px solid var(--accent);
+    }
+
+    /* ===== Animations ===== */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 0.35s ease;
+    }
+
+    /* ===== Empty state ===== */
+    .empty-capabilities {
+      color: var(--text-muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 16px 0;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 1024px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        gap: 16px;
+      }
+      header { padding: 0 16px; }
+      header h1 { font-size: 16px; }
+      #status { font-size: 12px; }
+    }
+    @media (max-width: 600px) {
+      .app-layout { padding: 12px; }
+      .panel-body { padding: 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Header ===== -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">A</div>
+      <h1>论文规范审核 Agent</h1>
+    </div>
+    <div id="status">
+      <span class="dot"></span>
+      <span>正在读取服务状态...</span>
+    </div>
+  </header>
+
+  <!-- ===== Main Layout ===== -->
+  <div class="app-layout">
+
+    <!-- ===== Left Sidebar ===== -->
+    <aside>
+
+      <!-- Upload Panel -->
+      <div class="panel panel-accent">
+        <div class="panel-header">
+          <h2>提交材料</h2>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label>论文文件</label>
+            <div class="file-upload" id="fileDrop" onclick="document.getElementById('fileInput').click()">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <div class="upload-text">
+                点击选择 <strong>DOCX</strong> 文件
+              </div>
+              <input type="file" id="fileInput" accept=".docx">
+            </div>
+            <div class="file-selected-name" id="fileSelectedName">
+              <span class="file-label">已选择文件</span>
+              <span id="selectedFileName"></span>
+            </div>
+            <div class="file-info" id="fileInfo">
+              <div class="filename" id="fileName"></div>
+              <div class="stats" id="fileStats"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="yearInput">审核年度</label>
+            <input type="number" id="yearInput" value="2026" min="2020" max="2030">
+            <div class="hint">近五年区间：审核年度及前 4 年</div>
+          </div>
+
+          <button class="btn btn-primary" id="uploadBtn">
+            <span class="btn-text">上传并解析</span>
+          </button>
+          <button class="btn btn-accent" id="reviewBtn" disabled style="margin-top:8px">
+            <span class="spinner"></span>
+            <span class="btn-text">开始审核</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MCP & SKILL Panel -->
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-header">
+          <h2>能力组件</h2>
+          <span class="badge" id="toolCount">0</span>
+        </div>
+        <div class="panel-body">
+          <div style="margin-bottom:12px;font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;">MCP 工具</div>
+          <div class="capability-list" id="mcpList">
+            <div class="empty-capabilities">加载中...</div>
+          </div>
+          <div style="margin:16px 0 12px;font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;">SKILL</div>
+          <div class="capability-list" id="skillList">
+            <div class="empty-capabilities">加载中...</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== Right Main ===== -->
+    <main>
+
+      <!-- Trace Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>执行轨迹</h2>
+          <span class="badge" id="traceCount" style="display:none">0</span>
+        </div>
+        <div class="panel-body">
+          <div class="trace-wrapper">
+          <div class="trace-timeline" id="traceContainer">
+            <div class="trace-hint" id="traceHint">尚未开始审核，上传文件后点击「开始审核」</div>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- Report Panel -->
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-header">
+          <h2>审核意见</h2>
+        </div>
+        <div class="panel-body">
+          <div class="report-area" id="reportArea">
+            <div class="report-placeholder" id="reportPlaceholder">
+              <div class="ph-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+              </div>
+              等待审核结果
+            </div>
+            <div class="markdown-body" id="reportContent" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const state = { text: '', formatAnalysis: null };
+    let traceCount = 0;
+
+    // ===== Safe DOM helpers =====
+    const $ = id => document.getElementById(id);
+    const $$ = (sel, ctx) => (ctx || document).querySelector(sel);
+
+    // ===== Markdown Rendering =====
+    function renderMarkdown(text) {
+      if (typeof marked !== 'undefined' && marked.parse) {
+        return marked.parse(text, { breaks: true, gfm: true });
+      }
+      return text.replace(/\n/g, '<br>');
+    }
+
+    // ===== Trace tag helper =====
+    function getTraceTag(name) {
+      if (name === 'memory_loaded' || name === 'memory_saved') return ['MEM', 'memory'];
+      if (name.startsWith('llm_')) return ['LLM', 'llm'];
+      if (name === 'inspect_document_format') return ['DOC', 'tool'];
+      if (name.startsWith('read_')) return ['SKILL', 'skill'];
+      if (name === 'check_citation' || name === 'verify_doi' || name === 'search_by_title') return ['CITE', 'citation'];
+      if (name === 'run_recent_ratio') return ['RATIO', 'tool'];
+      if (name === 'ping') return ['MCP', 'tool'];
+      if (name === 'completed') return ['DONE', 'complete'];
+      if (name === 'error') return ['ERR', 'error'];
+      return ['TOOL', 'tool'];
+    }
+
+    // ===== Config Load =====
+    async function loadConfig() {
+      try {
+        const resp = await fetch('/api/config');
+        const config = await resp.json();
+        const mysqlOk = config.memory && config.memory.ok;
+        const statusEl = $$('#status span:last-child');
+        if (statusEl) {
+          statusEl.textContent = 'LLM: ' + config.model + ' | MySQL: ' + (mysqlOk ? '正常' : '异常');
+        }
+        const dot = $$('#status .dot');
+        if (dot) dot.style.background = mysqlOk ? '#2e7d5e' : '#c0392b';
+
+        const mcpList = $('mcpList');
+        if (mcpList && config.mcp_tools && config.mcp_tools.length) {
+          mcpList.innerHTML = config.mcp_tools.map(t =>
+            '<div class="capability-item">' +
+              '<div class="capability-icon mcp">MCP</div>' +
+              '<div class="capability-info">' +
+                '<div class="cap-name">' + t.name + '</div>' +
+                '<div class="cap-desc">' + (t.description || '—') + '</div>' +
+              '</div>' +
+            '</div>'
+          ).join('');
+        }
+
+        const skillList = $('skillList');
+        if (skillList && config.skills && config.skills.length) {
+          skillList.innerHTML = config.skills.map(function(s) {
+            return '<div class="capability-item">' +
+              '<div class="capability-icon skill">SK</div>' +
+              '<div class="capability-info">' +
+                '<div class="cap-name">' + s.name + '</div>' +
+                '<div class="cap-desc">' + (s.files ? s.files.join('  ') : '—') + '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('');
+        }
+
+        var total = ((config.mcp_tools && config.mcp_tools.length) || 0) + ((config.skills && config.skills.length) || 0);
+        var tc = $('toolCount');
+        if (tc) tc.textContent = total;
+      } catch (e) {
+        console.error('loadConfig error:', e);
+      }
+    }
+
+    // ===== File Upload =====
+    var fileDrop = $('fileDrop');
+    var fileInput = $('fileInput');
+
+    if (fileInput) {
+      fileInput.addEventListener('change', function() {
+        if (fileInput.files.length) {
+          fileDrop.classList.add('has-file');
+          var sfn = $('selectedFileName');
+          if (sfn) sfn.textContent = fileInput.files[0].name;
+          var sn = $('fileSelectedName');
+          if (sn) sn.classList.add('visible');
+        } else {
+          fileDrop.classList.remove('has-file');
+          var sn = $('fileSelectedName');
+          if (sn) sn.classList.remove('visible');
+        }
+      });
+    }
+
+    if (fileDrop) {
+      fileDrop.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        fileDrop.style.borderColor = '#c9953c';
+        fileDrop.style.background = 'rgba(201,149,60,0.08)';
+      });
+      fileDrop.addEventListener('dragleave', function() {
+        fileDrop.style.borderColor = '';
+        fileDrop.style.background = '';
+      });
+      fileDrop.addEventListener('drop', function(e) {
+        e.preventDefault();
+        fileDrop.style.borderColor = '';
+        fileDrop.style.background = '';
+        if (e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          fileDrop.classList.add('has-file');
+          var sfn = $('selectedFileName');
+          if (sfn) sfn.textContent = e.dataTransfer.files[0].name;
+          var sn = $('fileSelectedName');
+          if (sn) sn.classList.add('visible');
+        }
+      });
+    }
+
+    var uploadBtn = $('uploadBtn');
+    if (uploadBtn) {
+      uploadBtn.addEventListener('click', async function() {
+        var file = fileInput.files[0];
+        if (!file) {
+          updateFileInfo('请选择 DOCX 文件', true);
+          return;
+        }
+        if (!file.name.toLowerCase().endsWith('.docx')) {
+          updateFileInfo('只接受 .docx 格式文件', true);
+          return;
+        }
+
+        uploadBtn.classList.add('loading');
+        uploadBtn.disabled = true;
+
+        try {
+          var form = new FormData();
+          form.append('file', file);
+          var resp = await fetch('/api/upload-docx', { method: 'POST', body: form });
+          var data = await resp.json();
+
+          if (!resp.ok) {
+            updateFileInfo(data.error || '解析失败', true);
+            return;
+          }
+
+          state.text = data.text;
+          state.formatAnalysis = data.format_analysis;
+          var summary = data.format_analysis.summary;
+
+          var fn = $('fileName');
+          if (fn) fn.textContent = data.filename;
+          var fs = $('fileStats');
+          if (fs) {
+            fs.innerHTML =
+              '<span class="stat stat-pass">' + summary.pass + ' 通过</span>' +
+              '<span class="stat stat-fail">' + summary.fail + ' 不符合</span>' +
+              '<span class="stat stat-unknown">' + summary.unknown + ' 无法判断</span>';
+          }
+          var fi = $('fileInfo');
+          if (fi) fi.classList.add('visible');
+          var rb = $('reviewBtn');
+          if (rb) rb.disabled = false;
+        } catch (e) {
+          updateFileInfo('请求失败：' + e.message, true);
+        } finally {
+          uploadBtn.classList.remove('loading');
+          uploadBtn.disabled = false;
+        }
+      });
+    }
+
+    function updateFileInfo(msg, isError) {
+      var info = $('fileInfo');
+      if (!info) return;
+      if (isError) {
+        info.innerHTML = '<div style="color:var(--error);font-size:13px;">' + msg + '</div>';
+        info.classList.add('visible');
+      } else {
+        var fn = $('fileName');
+        if (fn) fn.textContent = msg;
+        var fs = $('fileStats');
+        if (fs) fs.innerHTML = '';
+        info.classList.add('visible');
+      }
+    }
+
+    // ===== Trace =====
+    function addTrace(event) {
+      var container = $('traceContainer');
+      var hint = $('traceHint');
+      if (!container) return;
+      if (hint) hint.style.display = 'none';
+
+      traceCount++;
+      var tc = $('traceCount');
+      if (tc) {
+        tc.style.display = 'inline';
+        tc.textContent = traceCount;
+      }
+
+      var div = document.createElement('div');
+      div.className = 'trace-step';
+
+      var type = event.type || '';
+      var name = event.name || type;
+      var ms = event.elapsed_ms;
+      var isError = type === 'error';
+
+      var displayName = (type === 'tool_started' || type === 'tool_finished') ? name : type;
+      var tagInfo = getTraceTag(displayName);
+      var tagLabel = tagInfo[0];
+      var tagClass = tagInfo[1];
+
+      if (isError) div.classList.add('error');
+      else if (type === 'completed') div.classList.add('completed');
+      else if (type === 'llm_started' || type === 'tool_started') div.classList.add('active');
+
+      var msHtml = '';
+      if (ms !== undefined) {
+        msHtml = '<span class="trace-ms">' + (ms < 1000 ? ms + 'ms' : (ms / 1000).toFixed(1) + 's') + '</span>';
+      }
+
+      div.innerHTML =
+        '<div class="dot"></div>' +
+        '<div class="trace-content">' +
+          '<span class="trace-label">' +
+            '<span class="tag ' + tagClass + '">' + tagLabel + '</span>' +
+            '<span class="name">' + displayName + '</span>' +
+          '</span>' +
+          msHtml +
+        '</div>';
+
+      container.appendChild(div);
+
+      // Auto-scroll to bottom
+      var wrapper = container.parentElement;
+      if (wrapper) {
+        wrapper.scrollTop = wrapper.scrollHeight;
+      }
+    }
+
+    // ===== Report =====
+    function showReport(text) {
+      var placeholder = $('reportPlaceholder');
+      var content = $('reportContent');
+      if (placeholder) placeholder.style.display = 'none';
+      if (content) {
+        content.style.display = 'block';
+        content.innerHTML = renderMarkdown(text);
+        content.classList.add('fade-in');
+      }
+    }
+
+    // ===== Review =====
+    var reviewBtn = $('reviewBtn');
+    if (reviewBtn) {
+      reviewBtn.addEventListener('click', async function() {
+        reviewBtn.disabled = true;
+        reviewBtn.classList.add('loading');
+
+        var container = $('traceContainer');
+        if (container) {
+          container.querySelectorAll('.trace-step').forEach(function(el) { el.remove(); });
+        }
+        var hint = $('traceHint');
+        if (hint) {
+          hint.style.display = 'block';
+          hint.textContent = '正在连接审核引擎...';
+        }
+        traceCount = 0;
+        var tc = $('traceCount');
+        if (tc) tc.style.display = 'none';
+
+        var ph = $('reportPlaceholder');
+        if (ph) ph.style.display = 'block';
+        var rc = $('reportContent');
+        if (rc) {
+          rc.style.display = 'none';
+          rc.innerHTML = '';
+        }
+
+        try {
+          var resp = await fetch('/api/review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: state.text,
+              format_analysis: state.formatAnalysis,
+              review_year: Number($('yearInput').value),
+            }),
+          });
+
+          var reader = resp.body.getReader();
+          var decoder = new TextDecoder();
+          var buffer = '';
+
+          while (true) {
+            var result = await reader.read();
+            if (result.done) break;
+            buffer += decoder.decode(result.value, { stream: true });
+            var blocks = buffer.split('\n\n');
+            buffer = blocks.pop() || '';
+
+            for (var b = 0; b < blocks.length; b++) {
+              var lines = blocks[b].split('\n');
+              for (var l = 0; l < lines.length; l++) {
+                if (lines[l].startsWith('data: ')) {
+                  try {
+                    var event = JSON.parse(lines[l].slice(6));
+                    addTrace(event);
+                    if (event.type === 'completed') {
+                      showReport(event.report);
+                    }
+                    if (event.type === 'error') {
+                      showReport('**错误：** ' + event.detail);
+                    }
+                  } catch (e) {
+                    // skip
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          addTrace({ type: 'error', name: '网络错误', elapsed_ms: undefined });
+          showReport('**请求失败：** ' + e.message);
+        } finally {
+          reviewBtn.classList.remove('loading');
+          reviewBtn.disabled = false;
+        }
+      });
+    }
+
+    // ===== Init =====
+    loadConfig();
+  </script>
+</body>
+</html>
